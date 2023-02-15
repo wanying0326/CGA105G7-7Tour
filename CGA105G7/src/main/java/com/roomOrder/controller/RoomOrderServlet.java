@@ -7,7 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -24,6 +27,8 @@ import com.google.gson.Gson;
 import com.orderDetail.model.OrderDetailService;
 import com.orderDetail.model.OrderDetailVO;
 import com.roomOrder.model.*;
+import com.stock.model.StockService;
+import com.stock.model.StockVO;
 import com.Mes.model.MesService;
 import com.Users.model.UsersService;
 import com.Users.model.UsersVO;
@@ -365,6 +370,21 @@ public class RoomOrderServlet extends HttpServlet {
 				mesService.addMesVO(roomOrderVO.getUserId(), "訂單已取消",
 						"您的住宿訂單編號：" + orderId + "已取消",
 						buf, new Timestamp(System.currentTimeMillis()), (byte) 1);
+				///////////////歸還庫存量
+				StockService stockService = new StockService();
+				LocalDate lStartDay = roomOrderVO.getCheckinDate();
+				LocalDate lEndDay = roomOrderVO.getCheckoutDate();
+				Stream<LocalDate> stream = lStartDay.datesUntil(lEndDay, Period.ofDays(1));
+				List<LocalDate> dateList = stream.collect(Collectors.toList());
+				for(OrderDetailVO vo : list) {
+					for(LocalDate day : dateList) {
+						StockVO stockVO = stockService.getOneStock(vo.getRoomId(), day);
+						if(stockVO != null) {
+							stockVO.setRoomRest(stockVO.getRoomRest() + vo.getRoomAmount());
+							stockService.updateStock(stockVO);
+						}
+					}
+				}
 				/*************************** 更新完成,準備轉交(Send the Success view) ************/
 				req.setAttribute("roomOrderVO", roomOrderVO);
 				req.setAttribute("orderDetailList", list);

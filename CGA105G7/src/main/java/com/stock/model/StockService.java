@@ -41,6 +41,10 @@ public class StockService {
 	}
 	
 	//�w�d�� Struts 2 �Ϊ�
+	public void updateStock(StockVO stockVO) {
+		dao.update(stockVO);
+	}
+	
 	public void updateStock(StockVO stockVO, Connection con) {
 		dao.update(stockVO, con);
 	}
