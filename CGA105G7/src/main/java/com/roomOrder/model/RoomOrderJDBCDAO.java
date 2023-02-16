@@ -555,7 +555,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 			
 			//再同時更新廠商
 			VendorJDBCDAO dao = new VendorJDBCDAO();
-			dao.update(vendorVO);
+			dao.update(vendorVO, con);
 			
 			// 2●設定於 pstm.executeUpdate()之後
 			con.commit();
