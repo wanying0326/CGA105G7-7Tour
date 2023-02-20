@@ -30,3 +30,22 @@
         <li>廠商空房查詢 -> <a href="https://github.com/wanying0326/CGA105G7-7Tour/tree/master/CGA105G7/src/main/java/com/stock">java/com/stock</a></li>
         <li>客服聊天室管理 ->  <a href="https://github.com/wanying0326/CGA105G7-7Tour/tree/master/CGA105G7/src/main/java/com/customerService">java/com/customerService</a></li>
 </ul>
+
+<h3>頁面展示</h3>
+<table>
+        <tr>
+                <th>前台-訂房首頁</th>
+                <th>前台-旅宿店家瀏覽</th>
+                <th>前台-客服聊天室</th>
+                <th>後台-客服管理</th>
+                <th>後台-廠商房務管理</th>
+        </tr>
+        <tr>
+                <td><img src="https://user-images.githubusercontent.com/121594182/220048846-1464d6a6-c78d-4080-ad84-165ec7928772.png" alt= “RoomFrontIndex” width="200"></td>
+                <td><img src="https://user-images.githubusercontent.com/121594182/220054790-8f96e706-13ef-48ff-a095-1ff5f679df9d.png" alt= “BrowseVendorRoom” width="200"></td>
+                <td><img src="https://user-images.githubusercontent.com/121594182/220055656-6e0a4e47-7932-4230-88ff-bcba3fecdb7c.JPG" alt= “CustomerServiceChatRoom” width="200"></td>
+                 <td><img src="https://user-images.githubusercontent.com/121594182/220074025-8dca8540-a648-4eea-b557-4d62bcd9966b.JPG" alt= “UserOrderManagement” width="200"></td>
+                  <td><img src="https://user-images.githubusercontent.com/121594182/220074283-2b7ea5ee-a3b3-482c-a105-5e9542b99c30.png" alt= “UserOrderManagement” width="200"></td>
+        </tr>
+</table>
+
