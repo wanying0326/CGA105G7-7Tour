@@ -5,7 +5,7 @@
 :scroll:<a href="https://drive.google.com/file/d/1XtUt0F1rDTHjMEt67zOaiTftHDCd31QN/view?usp=sharing">文件介紹</a>
 <h3>技術</h3>
 <ul>
-<li>程式語言 ： Java17 + JavaSript</li>
+<li>程式語言 ： Java17 + JavaScript</li>
 <li>資料庫 ： MySQL 8.0 + Redis 3.2</li>
 <li>MVC架構 ： JDBC + JSP + Servlet 4 + Tomcat 9</li>
 <li>補充 ： JQuery、Ajax、WebSocket、Ecpay、Bootstrap5</li>
