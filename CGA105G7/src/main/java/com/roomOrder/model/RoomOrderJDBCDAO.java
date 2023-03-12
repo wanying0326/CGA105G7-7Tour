@@ -20,21 +20,22 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 	
 	private static final String INSERT_STMT = 
 			"INSERT INTO room_order (user_id,ven_id,coupon_no,customer_name,customer_phone,customer_email,checkin_date,checkout_date,order_time,"
-					+ "bonus_points_use,order_charge,order_charge_discount,order_status)" 
-					+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+					+ "bonus_points_use,order_charge,order_charge_discount,order_status,paymentTransactionId)" 
+					+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String GET_ALL_STMT = 
 			"SELECT order_id,user_id,ven_id,coupon_no,customer_name,customer_phone,customer_email,checkin_date,checkout_date,order_time,"
-			+ "bonus_points_use,order_charge,order_charge_discount,order_status,order_cancel,order_refund,score,reviews,reviews_time FROM room_order order by order_id";
+			+ "bonus_points_use,order_charge,order_charge_discount,order_status,order_cancel,order_refund,score,reviews,reviews_time,paymentTransactionId FROM room_order order by order_id";
 	private static final String GET_ONE_STMT = 
 			"SELECT order_id,user_id,ven_id,coupon_no,customer_name,customer_phone,customer_email,checkin_date,checkout_date,order_time,"
-			+ "bonus_points_use,order_charge,order_charge_discount,order_status,order_cancel,order_refund,score,reviews,reviews_time FROM room_order where order_id = ?";
+			+ "bonus_points_use,order_charge,order_charge_discount,order_status,order_cancel,order_refund,score,reviews,reviews_time,paymentTransactionId FROM room_order where order_id = ?";
 	private static final String DELETE = 
 			"DELETE FROM room_order where order_id = ?";
 	private static final String UPDATE = 
 			"UPDATE room_order set user_id=?, ven_id=?, coupon_no=?, customer_name=?, customer_phone=?, customer_email=?, checkin_date=?, checkout_date=?, order_time=?, "
-			+ "bonus_points_use=?, order_charge=?, order_charge_discount=?, order_status=?, order_cancel=?, order_refund=?, score=?, reviews=?, reviews_time=? where order_id = ?";
+			+ "bonus_points_use=?, order_charge=?, order_charge_discount=?, order_status=?, order_cancel=?, order_refund=?, score=?, reviews=?, reviews_time=?, paymentTransactionId=? where order_id = ?";
 	private static final String GET_BY_VENID = "SELECT * FROM room_order where ven_id=? order by order_id DESC";
 	private static final String GET_BY_USERID_CHEKIN = "SELECT * FROM room_order where user_id=? order by checkin_date DESC";
+	private static final String GET_BY_paymentTransactionId = "SELECT * FROM room_order where paymentTransactionId=?";
 	
 	
 	@Override
@@ -62,6 +63,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 			pstmt.setInt(11, roomOrderVO.getOrderCharge());
 			pstmt.setInt(12, roomOrderVO.getOrderChargeDiscount());
 			pstmt.setInt(13, roomOrderVO.getOrderStatus());
+			pstmt.setString(14, roomOrderVO.getPaymentTransactionId());
 			pstmt.executeUpdate();
 			
 			// Handle any driver errors
@@ -120,7 +122,8 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 			pstmt.setObject(16, roomOrderVO.getScore());
 			pstmt.setString(17, roomOrderVO.getReviews());
 			pstmt.setObject(18, roomOrderVO.getReviewsTime());
-			pstmt.setInt(19, roomOrderVO.getOrderId());
+			pstmt.setString(19, roomOrderVO.getPaymentTransactionId());
+			pstmt.setInt(20, roomOrderVO.getOrderId());
 			
 			pstmt.executeUpdate();
 		}catch (ClassNotFoundException e) {
@@ -223,6 +226,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 				roomOrderVO.setScore(rs.getInt("score"));
 				roomOrderVO.setReviews(rs.getString("reviews"));
 				roomOrderVO.setReviewsTime(rs.getObject("reviews_time", LocalDate.class));
+				roomOrderVO.setPaymentTransactionId(rs.getString("paymentTransactionId"));
 			}
 			
 		}catch (ClassNotFoundException e) {
@@ -288,6 +292,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 				roomOrderVO.setScore(rs.getInt("score"));
 				roomOrderVO.setReviews(rs.getString("reviews"));
 				roomOrderVO.setReviewsTime(rs.getObject("reviews_time", LocalDate.class));
+				roomOrderVO.setPaymentTransactionId(rs.getString("paymentTransactionId"));
 				list.add(roomOrderVO);
 			}
 			
@@ -354,6 +359,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 				roomOrderVO.setScore(rs.getInt("score"));
 				roomOrderVO.setReviews(rs.getString("reviews"));
 				roomOrderVO.setReviewsTime(rs.getObject("reviews_time", LocalDate.class));
+				roomOrderVO.setPaymentTransactionId(rs.getString("paymentTransactionId"));
 				list.add(roomOrderVO);
 			}
 			
@@ -420,6 +426,74 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 				roomOrderVO.setScore(rs.getInt("score"));
 				roomOrderVO.setReviews(rs.getString("reviews"));
 				roomOrderVO.setReviewsTime(rs.getObject("reviews_time", LocalDate.class));
+				roomOrderVO.setPaymentTransactionId(rs.getString("paymentTransactionId"));
+				list.add(roomOrderVO);
+			}
+			
+		}catch (ClassNotFoundException e) {
+			throw new RuntimeException("Couldn't load database driver. "
+					+ e.getMessage());
+		} catch (SQLException se) {
+			throw new RuntimeException("A database error occured. "
+					+ se.getMessage());
+		} finally {
+			if (pstmt != null) {
+				try {
+					pstmt.close();
+				} catch (SQLException se) {
+					se.printStackTrace(System.err);
+				}
+			}
+			if (con != null) {
+				try {
+					con.close();
+				} catch (Exception e) {
+					e.printStackTrace(System.err);
+				}
+			}
+		}
+		
+		return list;
+	}
+	public List<RoomOrderVO> findByPaymentTransactionId(String paymentTransactionId) {
+		
+		List<RoomOrderVO> list = new ArrayList<RoomOrderVO>();
+		RoomOrderVO roomOrderVO = null;
+		
+		Connection con = null;
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		
+		try {
+			
+			Class.forName(driver);
+			con = DriverManager.getConnection(url, userid, passwd);
+			pstmt = con.prepareStatement(GET_BY_paymentTransactionId);
+			pstmt.setString(1, paymentTransactionId);
+			rs = pstmt.executeQuery();
+			
+			while (rs.next()) {
+				roomOrderVO = new RoomOrderVO();
+				roomOrderVO.setOrderId(rs.getInt("order_id"));
+				roomOrderVO.setUserId(rs.getInt("user_id"));
+				roomOrderVO.setVenId(rs.getInt("ven_id"));
+				roomOrderVO.setCouponNo(rs.getInt("coupon_no"));
+				roomOrderVO.setCustomerName(rs.getString("customer_name"));
+				roomOrderVO.setCustomerPhone(rs.getString("customer_phone"));
+				roomOrderVO.setCustomerEmail(rs.getString("customer_email"));
+				roomOrderVO.setCheckinDate(rs.getObject("checkin_date", LocalDate.class));
+				roomOrderVO.setCheckoutDate(rs.getObject("checkout_date", LocalDate.class));
+				roomOrderVO.setOrderTime(rs.getObject("order_time", LocalDateTime.class));
+				roomOrderVO.setBonusPointsUse(rs.getInt("bonus_points_use"));
+				roomOrderVO.setOrderCharge(rs.getInt("order_charge"));
+				roomOrderVO.setOrderChargeDiscount(rs.getInt("order_charge_discount"));
+				roomOrderVO.setOrderStatus(rs.getInt("order_status"));
+				roomOrderVO.setOrderCancel(rs.getString("order_cancel"));
+				roomOrderVO.setOrderRefund(rs.getInt("order_refund"));
+				roomOrderVO.setScore(rs.getInt("score"));
+				roomOrderVO.setReviews(rs.getString("reviews"));
+				roomOrderVO.setReviewsTime(rs.getObject("reviews_time", LocalDate.class));
+				roomOrderVO.setPaymentTransactionId(rs.getString("paymentTransactionId"));
 				list.add(roomOrderVO);
 			}
 			
@@ -472,6 +546,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
     			pstmt.setInt(11, roomOrderVO.getOrderCharge());
     			pstmt.setInt(12, roomOrderVO.getOrderChargeDiscount());
     			pstmt.setInt(13, roomOrderVO.getOrderStatus());
+    			pstmt.setString(14, roomOrderVO.getPaymentTransactionId());
     			pstmt.executeUpdate();
     			
     			//掘取對應的自增主鍵值
@@ -482,7 +557,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
     			} 
     			rs.close();
     		
-    		// 再同時新增員工
+    		// 再同時新增明細
     		OrderDetailJDBCDAO detailDao = new OrderDetailJDBCDAO();
     		for (OrderDetailVO orderDetailVO : detailList) {
     			orderDetailVO.setOrderId(Integer.parseInt(nextOrderId)) ;
@@ -529,7 +604,7 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 			// 1●設定於 pstm.executeUpdate()之前
     		con.setAutoCommit(false);
 			
-    		// 先新增部門
+    		// 先更新訂單
 			String cols[] = {"ORDER_ID"};
 			pstmt = con.prepareStatement(UPDATE , cols);
 			pstmt.setInt(1, roomOrderVO.getUserId());
@@ -550,7 +625,8 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 			pstmt.setObject(16, roomOrderVO.getScore());
 			pstmt.setString(17, roomOrderVO.getReviews());
 			pstmt.setObject(18, roomOrderVO.getReviewsTime());
-			pstmt.setInt(19, roomOrderVO.getOrderId());
+			pstmt.setString(19, roomOrderVO.getPaymentTransactionId());
+			pstmt.setInt(20, roomOrderVO.getOrderId());
 			pstmt.executeUpdate();
 			
 			//再同時更新廠商

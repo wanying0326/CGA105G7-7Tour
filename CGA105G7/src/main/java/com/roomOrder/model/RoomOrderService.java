@@ -21,7 +21,7 @@ public class RoomOrderService {
 	public RoomOrderVO addRoomOrder(Integer userId, Integer venId, Integer couponNo, String customerName,
 			String customerPhone, String customerEmail, LocalDate checkinDate, LocalDate checkoutDate,
 			LocalDateTime orderTime, Integer bonusPointsUse, Integer orderCharge, Integer orderChargeDiscount,
-			Integer orderStatus) {
+			Integer orderStatus, String paymentTransactionId) {
 
 		RoomOrderVO roomOrderVO = new RoomOrderVO();
 
@@ -38,6 +38,7 @@ public class RoomOrderService {
 		roomOrderVO.setOrderCharge(orderCharge);
 		roomOrderVO.setOrderChargeDiscount(orderChargeDiscount);
 		roomOrderVO.setOrderStatus(orderStatus);
+		roomOrderVO.setPaymentTransactionId(paymentTransactionId);;
 		dao.insert(roomOrderVO);
 
 		return roomOrderVO;
@@ -52,7 +53,7 @@ public class RoomOrderService {
 			String customerPhone, String customerEmail, LocalDate checkinDate, LocalDate checkoutDate,
 			LocalDateTime orderTime, Integer bonusPointsUse, Integer orderCharge, Integer orderChargeDiscount,
 			Integer orderStatus, String orderCancel, Integer orderRefund, Integer score, String reviews,
-			LocalDate reviewsTime) {
+			LocalDate reviewsTime, String paymentTransactionId) {
 
 		RoomOrderVO roomOrderVO = new RoomOrderVO();
 
@@ -75,6 +76,7 @@ public class RoomOrderService {
 		roomOrderVO.setScore(score);
 		roomOrderVO.setReviews(reviews);
 		roomOrderVO.setReviewsTime(reviewsTime);
+		roomOrderVO.setPaymentTransactionId(paymentTransactionId);;
 		dao.update(roomOrderVO);
 
 		return dao.findByPrimaryKey(orderId);
@@ -103,6 +105,9 @@ public class RoomOrderService {
 	
 	public List<RoomOrderVO> getByUserIdOrderByCheckin(Integer userId) {
 		return dao.findByUserIdOrderByCheckin(userId);
+	}
+	public List<RoomOrderVO> getByPaymentTransactionId(String paymentTransactionId) {
+		return dao.findByPaymentTransactionId(paymentTransactionId);
 	}
 	
 	public void addRoomOrderWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, Connection con) {

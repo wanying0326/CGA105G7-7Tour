@@ -22,6 +22,7 @@ public class RoomOrderVO  implements java.io.Serializable{
 	private Integer score;
 	private String reviews;
 	private LocalDate reviewsTime;
+	private String paymentTransactionId;
 	
 	public Integer getOrderId() {
 		return orderId;
@@ -136,6 +137,12 @@ public class RoomOrderVO  implements java.io.Serializable{
 	}
 	public void setReviewsTime(LocalDate reviewsTime) {
 		this.reviewsTime = reviewsTime;
+	}
+	public String getPaymentTransactionId() {
+		return paymentTransactionId;
+	}
+	public void setPaymentTransactionId(String paymentTransactionId) {
+		this.paymentTransactionId = paymentTransactionId;
 	}
 	
 }

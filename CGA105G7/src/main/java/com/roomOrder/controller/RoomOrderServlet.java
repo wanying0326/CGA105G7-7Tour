@@ -353,11 +353,28 @@ public class RoomOrderServlet extends HttpServlet {
 					req.getRequestDispatcher("/front-end/room/user_order_list.jsp").forward(req, res);
 					return;
 				}
-				OrderDetailService orderDetailService = new OrderDetailService();
-				List<OrderDetailVO> list = orderDetailService.getByOrderID(orderId);
 				/*************************** 更新訂單狀態，取消訂單 ****************************/
 				roomOrderVO.setOrderStatus(3);
 				roomOrderService.updateRoomOrder(roomOrderVO);
+				/*************************** 退款 ****************************/
+				String paymentTransactionId = roomOrderVO.getPaymentTransactionId();
+				List<RoomOrderVO> roomOrderVOList = roomOrderService.getByPaymentTransactionId(paymentTransactionId);
+				OrderPayManagement management = new OrderPayManagement();
+				boolean refundable = management.refundable(paymentTransactionId);
+				List<RoomOrderVO> cancelList = new ArrayList<>();
+				if (roomOrderVOList.size() == 1 || !refundable) {
+					for(RoomOrderVO vo : roomOrderVOList) {
+						vo.setOrderStatus(3);
+						roomOrderService.updateRoomOrder(vo);
+						cancelList.add(vo);
+					}
+					management.cancelOrder(paymentTransactionId);
+				}else {
+					management.refundOrder(roomOrderVO.getOrderChargeDiscount(), paymentTransactionId, orderId);
+					cancelList.add(roomOrderVO);
+				}
+				
+				
 				///////////////////通知會員訂單已取消
 				byte[] buf = null;
 				try (InputStream in = Files.newInputStream(Path.of(getServletContext().getRealPath("/front-end/room/images") + "/cancelled.png"))){
@@ -371,23 +388,28 @@ public class RoomOrderServlet extends HttpServlet {
 						"您的住宿訂單編號：" + orderId + "已取消",
 						buf, new Timestamp(System.currentTimeMillis()), (byte) 1);
 				///////////////歸還庫存量
-				StockService stockService = new StockService();
-				LocalDate lStartDay = roomOrderVO.getCheckinDate();
-				LocalDate lEndDay = roomOrderVO.getCheckoutDate();
-				Stream<LocalDate> stream = lStartDay.datesUntil(lEndDay, Period.ofDays(1));
-				List<LocalDate> dateList = stream.collect(Collectors.toList());
-				for(OrderDetailVO vo : list) {
-					for(LocalDate day : dateList) {
-						StockVO stockVO = stockService.getOneStock(vo.getRoomId(), day);
-						if(stockVO != null) {
-							stockVO.setRoomRest(stockVO.getRoomRest() + vo.getRoomAmount());
-							stockService.updateStock(stockVO);
+				OrderDetailService orderDetailService = new OrderDetailService();
+				List<OrderDetailVO> orderDetailList = orderDetailService.getByOrderID(orderId);
+				for(RoomOrderVO orderVO : cancelList) {
+					StockService stockService = new StockService();
+					LocalDate lStartDay = roomOrderVO.getCheckinDate();
+					LocalDate lEndDay = roomOrderVO.getCheckoutDate();
+					Stream<LocalDate> stream = lStartDay.datesUntil(lEndDay, Period.ofDays(1));
+					List<LocalDate> dateList = stream.collect(Collectors.toList());
+					List<OrderDetailVO> orderDetailLists = orderDetailService.getByOrderID(orderVO.getOrderId());
+					for(OrderDetailVO vo : orderDetailLists) {
+						for(LocalDate day : dateList) {
+							StockVO stockVO = stockService.getOneStock(vo.getRoomId(), day);
+							if(stockVO != null) {
+								stockVO.setRoomRest(stockVO.getRoomRest() + vo.getRoomAmount());
+								stockService.updateStock(stockVO);
+							}
 						}
 					}
 				}
 				/*************************** 更新完成,準備轉交(Send the Success view) ************/
 				req.setAttribute("roomOrderVO", roomOrderVO);
-				req.setAttribute("orderDetailList", list);
+				req.setAttribute("orderDetailList", orderDetailList);
 				String url = "/front-end/room/user_order_detail.jsp";
 				RequestDispatcher successView = req.getRequestDispatcher(url);
 				successView.forward(req, res);

@@ -23,8 +23,8 @@ public class StockManager implements ServletContextListener {
     public void contextInitialized(ServletContextEvent event) {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         Duration duration = Duration.between(LocalDateTime.now(),LocalDateTime.of(LocalDate.now().plusDays(1), LocalTime.MIDNIGHT));
-        scheduler.scheduleAtFixedRate(new DailyStockCheck(), duration.toMillis(), 60*60*24*1000, TimeUnit.MILLISECONDS);
-//        scheduler.scheduleAtFixedRate(new DailyStockCheck(), 0, 1, TimeUnit.DAYS);
+//        scheduler.scheduleAtFixedRate(new DailyStockCheck(), duration.toMillis(), 60*60*24*1000, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(new DailyStockCheck(), 0, 1, TimeUnit.DAYS);
     }
 
     @Override

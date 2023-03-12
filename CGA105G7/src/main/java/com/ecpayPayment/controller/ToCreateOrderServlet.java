@@ -15,7 +15,9 @@ public class ToCreateOrderServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
     	req.setCharacterEncoding("UTF-8");
+    	String paymentTransactionId = req.getParameter("paymentTransactionId");
+    	req.setAttribute("paymentTransactionId", paymentTransactionId);
 		req.getRequestDispatcher("/ShoppingCart?action=newOrder").forward(req, res);
-			return;
+		return;
     }
 }

@@ -305,6 +305,7 @@ public class ShoppingCartServlet extends HttpServlet {
 		// 成立訂單
 		if (action.equals("newOrder")) {
 			try {
+				String paymentTransactionId = (String) req.getAttribute("paymentTransactionId");
 				Map<String, List<Object>> orderMap = new HashMap<String, List<Object>>();
 				@SuppressWarnings("unchecked")
 				Vector<RoomItem> paylist = (Vector<RoomItem>) session.getAttribute("paymentItems");
@@ -355,6 +356,7 @@ public class ShoppingCartServlet extends HttpServlet {
 				
 				for(List<Object> anOrder : allOrderList) {
 					RoomOrderVO roomOrderVO = new RoomOrderVO();
+					roomOrderVO.setPaymentTransactionId(paymentTransactionId);
 					roomOrderVO.setCustomerName(customerName);
 					roomOrderVO.setCustomerPhone(phone);
 					roomOrderVO.setCustomerEmail(email);
