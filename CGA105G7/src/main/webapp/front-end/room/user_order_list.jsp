@@ -47,6 +47,8 @@
         <div class="row justify-content-between">
             <div class="col-7">
                 <div class="nav nav-tabs" id="" role="tablist">
+                    <button class="nav-link" id="" data-bs-toggle="tab" data-bs-target="#payment-order"
+                        type="button" role="tab">待付款</button>
                     <button class="nav-link active" id="" data-bs-toggle="tab" data-bs-target="#future-order"
                         type="button" role="tab">未來式</button>
                     <button class="nav-link" id="" data-bs-toggle="tab" data-bs-target="#history-order" type="button"
@@ -66,6 +68,43 @@
         </div>
 		<!-- order tables -->
 		<div class="tab-content my-3" id="order-tables">
+		    <!-- payment-order tables -->
+		    <div class="tab-pane fade" id="payment-order" role="tabpanel">
+		        <table class="col-10 table table-striped text-center align-middle" id="ftable">
+		            <thead class="table-primary">
+		                <tr>
+		                    <th scope="col">訂單編號</th>
+		                    <th scope="col">住宿名稱</th>
+		                    <th scope="col" class="checkday">入住日</th>
+		                    <th scope="col">退房日</th>
+		                    <th scope="col">付款金額</th>
+		                    <th scope="col" class="orderday">訂單成立日期</th>
+		                    <th scope="col"></th>
+		                </tr>
+		            </thead>
+		            <tbody>
+		            	<c:forEach var="roomOrderVO" items="${orderListByCheckin}">
+		                	<c:if test="${roomOrderVO.orderStatus  == 4}">
+								<tr>
+							            <td>${roomOrderVO.orderId}</td>
+							            <td>${vendor.getOneVendor(roomOrderVO.venId).venName}</td>
+							            <td>${roomOrderVO.checkinDate}</td>
+							            <td>${roomOrderVO.checkoutDate}</td>
+							            <td>${roomOrderVO.orderChargeDiscount}</td>
+							            <td>${(roomOrderVO.orderTime).toLocalDate()}</td>
+							            <td>
+		                				<form method="post" action="<%=request.getContextPath()%>/OrderDetail">
+							            <input type="hidden" name="action" value="getOrderDetailByOrder">
+							            <input type="hidden" name="orderId" value="${roomOrderVO.orderId}">
+							            <button type="submit" class="btn btn-outline-primary">查看訂單明細</button>
+						        		</form>
+							            </td>
+							    </tr>
+						    </c:if>
+						</c:forEach>
+		            </tbody>
+		        </table>
+		    </div>
 		    <!-- future-order tables -->
 		    <div class="tab-pane fade show active" id="future-order" role="tabpanel">
 		        <table class="col-10 table table-striped text-center align-middle" id="ftable">

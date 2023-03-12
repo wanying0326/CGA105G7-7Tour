@@ -110,8 +110,8 @@ public class RoomOrderService {
 		return dao.findByPaymentTransactionId(paymentTransactionId);
 	}
 	
-	public void addRoomOrderWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, Connection con) {
-		dao.insertWithDetailUpdateUser(roomOrderVO, detailList, con);
+	public Integer addRoomOrderWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, Connection con) {
+		return dao.insertWithDetailUpdateUser(roomOrderVO, detailList, con);
 	}
 	
 	public void updateOrderReview(RoomOrderVO roomOrderVO, VendorVO vendorVO) {

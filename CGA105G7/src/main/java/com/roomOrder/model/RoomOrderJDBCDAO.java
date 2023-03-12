@@ -524,10 +524,10 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
 	}
 	
 	@Override
-	public void insertWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, Connection con) {
+	public Integer insertWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, Connection con) {
 
 		PreparedStatement pstmt = null;
-
+		
 		try {
 
     			// 先新增訂單
@@ -556,14 +556,17 @@ public class RoomOrderJDBCDAO implements RoomOrder_interface{
     				nextOrderId = rs.getString(1);
     			} 
     			rs.close();
-    		
+    			
+    			Integer orderId = Integer.parseInt(nextOrderId);
+    			
     		// 再同時新增明細
     		OrderDetailJDBCDAO detailDao = new OrderDetailJDBCDAO();
     		for (OrderDetailVO orderDetailVO : detailList) {
-    			orderDetailVO.setOrderId(Integer.parseInt(nextOrderId)) ;
+    			orderDetailVO.setOrderId(orderId) ;
     			detailDao.insert2(orderDetailVO,con);
     		}
     		
+    		return orderId;
     		
 			// Handle any SQL errors
 		} catch (SQLException se) {

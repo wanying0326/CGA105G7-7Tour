@@ -113,6 +113,58 @@ public class OrderPayManagement {
 	        
 	    }
 	 
+	 @SuppressWarnings({ "rawtypes", "unchecked" })
+	 public String paymentStatus(String paymentTransactionId) throws IOException {
+		 
+		 URL url = new URL ("https://test-api.fonpay.tw/api/payment/paymentQueryOrder");
+		 HttpURLConnection con = (HttpURLConnection)url.openConnection();
+		 con.setRequestMethod("POST");
+		 con.setRequestProperty("Accept", "application/json");
+		 con.setRequestProperty("key",FONPAY_API_KEY);
+		 con.setRequestProperty("secret", FONPAY_API_SECRET);
+		 con.setRequestProperty("merchantCode", FONPAY_API_MERCHANT_CODE);
+		 con.setRequestProperty("Content-Type", "application/json");
+		 con.setRequestProperty("User-Agent", "Tibame_Student");
+		 con.setRequestProperty("X-ignore", "true");
+		 con.setDoOutput(true);
+		 
+		 
+		 String jsonInputString = "{ " +
+				 "'request':{" +
+				 "'paymentTransactionId':'" + paymentTransactionId + "'" +
+				 "}," +
+				 "'basic':{" +
+				 "'appVersion':'0.9'," +
+				 "'os':'IOS'," +
+				 "'appName':'POSTMAN'," +
+				 "'latitude':24.25," +
+				 "'clientIp':'61.216.102.83'," +
+				 "'lang':'zh_TW'," +
+				 "'deviceId':'123456789'," +
+				 "'longitude':124.25" +
+				 "}}";
+		 
+		 try(OutputStream os = con.getOutputStream()) {
+			 byte[] input = jsonInputString.getBytes("utf-8");
+			 os.write(input, 0, input.length);
+		 }
+		 
+		 StringBuilder response = new StringBuilder();
+		 try(BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "utf-8"))) {
+			 String responseLine = null;
+			 while ((responseLine = br.readLine()) != null) {
+				 response.append(responseLine.trim());
+			 }
+		 }
+		 
+		 
+		 HashMap<String, Object> map = new Gson().fromJson(response.toString(), HashMap.class);
+		 LinkedTreeMap result = (LinkedTreeMap) map.get("result");
+		 LinkedTreeMap payment = (LinkedTreeMap) result.get("payment");
+		 return (String) payment.get("status");
+		 
+	 }
+	 
 	 public void refundOrder(Integer price, String paymentTransactionId, Integer orderId) throws IOException {
  		
 		    URL url = new URL ("https://test-api.fonpay.tw/api/payment/paymentRefundOrder");

@@ -72,6 +72,11 @@
                 <span class="bg-danger text-white p-2 rounded-3 fw-bold">訂單已取消</span>
             	</div>
             </c:if>
+            <c:if test="${roomOrderVO.orderStatus == 4}">
+            	<div class="col-2 text-end">
+            		<a class="btn btn-success" href="<%=request.getContextPath()%>/Pay?orderId=${roomOrderVO.orderId}">立即付款</a>
+            	</div>
+            </c:if>
         </div>
         <!-- order tables -->
         <div class="row my-4">

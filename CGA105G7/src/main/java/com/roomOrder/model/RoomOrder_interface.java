@@ -17,7 +17,7 @@ public interface RoomOrder_interface {
     public List<RoomOrderVO> findByUserIdOrderByCheckin(Integer userId); // 會員訂單 依入住日新至舊排序
 	public List<RoomOrderVO> findByPaymentTransactionId(String paymentTransactionId);
   //同時新增訂單與明細
-    public void insertWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, java.sql.Connection con); 
+    public Integer insertWithDetailUpdateUser(RoomOrderVO roomOrderVO, List<OrderDetailVO> detailList, java.sql.Connection con); 
   //新增評論與更新廠商
     public void updateWithVendor(RoomOrderVO roomOrderVO, VendorVO vendorVO);
 }

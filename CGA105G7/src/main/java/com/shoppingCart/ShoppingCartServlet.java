@@ -305,13 +305,54 @@ public class ShoppingCartServlet extends HttpServlet {
 		// 成立訂單
 		if (action.equals("newOrder")) {
 			try {
-				String paymentTransactionId = (String) req.getAttribute("paymentTransactionId");
-				Map<String, List<Object>> orderMap = new HashMap<String, List<Object>>();
-				@SuppressWarnings("unchecked")
-				Vector<RoomItem> paylist = (Vector<RoomItem>) session.getAttribute("paymentItems");
+				Vector<RoomItem> paylist = (Vector<RoomItem>) req.getSession().getAttribute("paymentItems");
 				StockService stockService = new StockService();
-				HashMap<String, Object> payInfo = (HashMap<String, Object>) session.getAttribute("payInfo");
-				int total = (int) payInfo.get("orgPrice");////總金額
+				int total = 0;////總金額
+		////////// 確認庫存
+				for (RoomItem roomItem : paylist) {
+					Stream<LocalDate> stream = roomItem.getCheckinDate().datesUntil(roomItem.getCheckoutDate(),
+							Period.ofDays(1));
+					List<LocalDate> dateList = stream.collect(Collectors.toList());
+					for (LocalDate day : dateList) {
+						if (stockService.getOneStock(roomItem.getRoomId(), day).getRoomRest() < roomItem.getAmount()) {
+							req.setAttribute("lossStock", "error");
+							req.getRequestDispatcher("/ShoppingCart?action=showCart").forward(req, res);
+							return; // 如果其中有一天庫存小於需求，中斷回傳
+						}
+					}
+					total += roomItem.getPrice() * roomItem.getAmount();
+				}
+				UsersVO usersVO = (UsersVO) req.getSession().getAttribute("usersVO");
+				Integer couponNo = (req.getParameter("couponNo") == null || req.getParameter("couponNo").equals("")) ? null : Integer.parseInt(req.getParameter("couponNo"));
+				int couponDiscount = 0; ////優惠券折抵金額
+				CouponService couponService = new CouponService();
+				if(!(couponNo == null)) {
+					CouponVO couponVO = couponService.getOneCoupon(couponNo);
+					if(couponVO.getCouponType().equals(0)) {
+						couponDiscount = couponVO.getCouponDiscount().intValue();
+					}else {
+						BigDecimal discount = new BigDecimal(couponVO.getCouponDiscount());
+						BigDecimal totalPrice = new BigDecimal(total);
+						discount = totalPrice.subtract(totalPrice.multiply(discount)).setScale(0, RoundingMode.HALF_UP);
+						couponDiscount = discount.intValue();
+					}
+				}
+				Boolean bonusPointsUse = (req.getParameterValues("bonus") != null ) ? true : false;
+				Integer bonusPoint = 0; ////紅利點數
+				if(bonusPointsUse) {
+					if(total > usersVO.getBonusPoints()) {
+						bonusPoint = usersVO.getBonusPoints();
+					}else {
+						bonusPoint = total;
+					}
+				}
+				int payTotal = total - couponDiscount - bonusPoint;//付款金額
+				
+				String customerName = req.getParameter("customerName");
+				String phone = req.getParameter("customerPhone");
+				String email = req.getParameter("customerEmail");
+				
+				Map<String, List<Object>> orderMap = new HashMap<String, List<Object>>();
 				
 				for (RoomItem roomItem : paylist) {
 					List<Object> anOrder = new ArrayList<Object>();
@@ -325,28 +366,21 @@ public class ShoppingCartServlet extends HttpServlet {
 				VendorService vendorService = new VendorService();
 				RoomService roomService = new RoomService();
 				UsersService usersService = new UsersService();
-				UsersVO usersVO = (UsersVO) req.getSession().getAttribute("usersVO");
-				Integer couponNo = (Integer) payInfo.get("couponNo");
-				Integer bonusPoint = (Integer) payInfo.get("bonusPoint"); ////紅利點數
-				int couponDiscount = (int) payInfo.get("couponDiscount"); ////優惠券折抵金額
 				
-				String customerName = (String) payInfo.get("customerName");
-				String phone = (String) payInfo.get("customerPhone");
-				String email = (String) payInfo.get("customerEmail");
 				List<List<Object>> allOrderList = new ArrayList<List<Object>>(orderMap.values());
 				int orderIndex = 0;
 				
 		////////// 新增訂單(1.訂單與明細 2.更新庫存 3.更新會員 4.更新會員優惠券)
-				String messageText = "親愛的顧客" + usersVO.getUserName() + "您好<br>"
-						+ "    您" + LocalDate.now() + "於本網站訂購以下住宿，訂單已成立"
-						+ "    <br>"; ////郵件內容
 				RoomOrderService roomOrderService = new RoomOrderService();
-				Integer newBP = new BigDecimal(total - bonusPoint - couponDiscount).divide(new BigDecimal(100), 0 , RoundingMode.HALF_UP).intValue();
+				Integer newBP = new BigDecimal(payTotal).divide(new BigDecimal(100), 0 , RoundingMode.HALF_UP).intValue();
 				usersVO.setBonusPoints(usersVO.getBonusPoints() - bonusPoint + newBP);
-				usersVO.setPurchaseTotal(usersVO.getPurchaseTotal() + total - bonusPoint - couponDiscount);
+				usersVO.setPurchaseTotal(usersVO.getPurchaseTotal() + payTotal);
 				if(usersVO.getPurchaseTotal() >= 50000) {
 					usersVO.setUserShopLevel((byte)1);
 				}
+				
+				List<Integer> orderIdList = new ArrayList<>();
+				
 				Connection con = null;
 				Class.forName("com.mysql.cj.jdbc.Driver");
 				con = DriverManager.getConnection("jdbc:mysql://localhost:3306/cga105_g7?serverTimezone=Asia/Taipei", "root", "02021");
@@ -356,7 +390,6 @@ public class ShoppingCartServlet extends HttpServlet {
 				
 				for(List<Object> anOrder : allOrderList) {
 					RoomOrderVO roomOrderVO = new RoomOrderVO();
-					roomOrderVO.setPaymentTransactionId(paymentTransactionId);
 					roomOrderVO.setCustomerName(customerName);
 					roomOrderVO.setCustomerPhone(phone);
 					roomOrderVO.setCustomerEmail(email);
@@ -372,7 +405,7 @@ public class ShoppingCartServlet extends HttpServlet {
 								roomOrderVO.setCheckinDate(roomItem.getCheckinDate());
 								roomOrderVO.setCheckoutDate(roomItem.getCheckoutDate());
 								roomOrderVO.setOrderTime(LocalDateTime.now());
-								roomOrderVO.setOrderStatus(0);
+								roomOrderVO.setOrderStatus(4);
 							}
 							OrderDetailVO orderDetailVO = new OrderDetailVO();
 							orderDetailVO.setRoomId(roomItem.getRoomId());
@@ -406,25 +439,10 @@ public class ShoppingCartServlet extends HttpServlet {
 						roomOrderVO.setOrderCharge(subTotal);
 						roomOrderVO.setOrderChargeDiscount(subTotal - bonusPoint - couponDiscount);
 					}
-					roomOrderService.addRoomOrderWithDetailUpdateUser(roomOrderVO, detailList, con);
+					Integer orderId = roomOrderService.addRoomOrderWithDetailUpdateUser(roomOrderVO, detailList, con);
+					orderIdList.add(orderId);
 					orderIndex++;
 					
-					//郵件內容
-					messageText += "    <table style=\"border-collapse:collapse; border: 1px solid black; text-align: center; margin: 5px;\">"
-				      		+ "        <tr>"
-				      		+ "            <th style=\"background-color:#75c6e0; padding: 10px;\">" + vendorService.getOneVendor(roomOrderVO.getVenId()).getVenName() 
-				      		+ "<br>" + roomOrderVO.getCheckinDate() + " 至 " + roomOrderVO.getCheckoutDate() + "</th>"
-				      		+ "        </tr>"
-				      		+ "        <tr style=\"border-collapse:collapse; border: 1px solid black;\"><td>";
-					int listcount = 0;
-					for(OrderDetailVO vo : detailList) {
-						if(listcount != 0) {
-							messageText += "<br>" + roomService.getOneRoom(vo.getRoomId()).getRoomName() + vo.getRoomAmount() + "間";
-						}else {
-							messageText += roomService.getOneRoom(vo.getRoomId()).getRoomName() + vo.getRoomAmount() + "間";
-						}
-					}
-					messageText += "</td></tr></table>";
 				}
 				usersService.updateUser(usersVO, con);
 				if(couponNo != null) {
@@ -439,29 +457,6 @@ public class ShoppingCartServlet extends HttpServlet {
 				con.setAutoCommit(true);
 				con.close();
 				
-	////////// 寄出通知訂單成立郵件
-				String subject = "【7Tour】親愛的顧客您好，您的訂單已成立";
-				messageText += "    訂單明細可至會員中心【我的訂單】查詢<br>"
-			      		+ "    <br>"
-			      		+ "    此為系統通知郵件，請勿回覆此郵件。<br>"
-			      		+ "    <br>"
-			      		+ "    感謝您使用7Tour旅遊網！<br>"
-			      		+ "    祝您有個美好的旅程~<br>"
-			      		+ "    7Tour訂房中心";	 
-				OrderEmail orderEmail = new OrderEmail();
-			    orderEmail.sendMail(usersVO.getUserAccount(), subject, messageText);	
-    ///////// 站內通知
-				byte[] buf = null;
-				try (InputStream in = Files.newInputStream(Path.of(getServletContext().getRealPath("/front-end/room/images") + "/shopping-bag.png"))){
-					buf = new byte[in.available()];
-					in.read(buf);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				MesService mesService = new MesService();
-				mesService.addMesVO(usersVO.getUserId(), "訂單已成立",
-						"您的住宿訂單已成立，詳情可至我的訂單中查看",
-						buf, new Timestamp(System.currentTimeMillis()), (byte) 1);
 				
 	////////// 刪除session paymentItems 及 shoppingcart已結帳項目
 			    if(buylist != null) {
@@ -474,9 +469,17 @@ public class ShoppingCartServlet extends HttpServlet {
 			    }
 			    session.removeAttribute("paymentItems");
 			    session.removeAttribute("payInfo");
-				
-				req.getRequestDispatcher("/RoomOrder?action=toThisUserOrder").forward(req, res);
-				return;
+			    
+				if(payTotal < 1) {
+					req.getRequestDispatcher("/RoomOrder?action=toThisUserOrder").forward(req, res);
+					return;
+				}else {
+					req.setAttribute("payTotal", payTotal);
+					req.setAttribute("userId", usersVO.getUserId());
+					req.setAttribute("orderIdList", orderIdList);
+					req.getRequestDispatcher("/FonPay").forward(req, res);
+					return;
+				}
 			}catch (ClassNotFoundException e) {
 				throw new RuntimeException("Couldn't load database driver. "
 						+ e.getMessage());

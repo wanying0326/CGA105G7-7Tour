@@ -2,20 +2,23 @@ package com.ecpayPayment.controller;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,16 +28,16 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.coupon.model.CouponService;
-import com.coupon.model.CouponVO;
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import com.shoppingCart.RoomItem;
+import com.orderDetail.model.OrderDetailService;
+import com.orderDetail.model.OrderDetailVO;
+import com.roomOrder.controller.OrderPayManagement;
+import com.roomOrder.model.RoomOrderService;
+import com.roomOrder.model.RoomOrderVO;
 import com.stock.model.StockService;
-import com.Users.model.UsersVO;
-
-import ecpay.payment.integration.AllInOne;
-import ecpay.payment.integration.domain.AioCheckOutOneTime;
+import com.stock.model.StockVO;
+import com.Mes.model.MesService;
 
 @WebServlet("/FonPay")
 public class FonPayServlet extends HttpServlet {
@@ -42,75 +45,75 @@ public class FonPayServlet extends HttpServlet {
 	static String FONPAY_API_SECRET = "9Zc4DSfuzk5F4yrpGFfI";
 	static String FONPAY_API_MERCHANT_CODE = "ME18315275";
 	static String PAYMENT_CREATE_ORDER = "PaymentCreateOrder";
+	
+	private ScheduledExecutorService scheduler;
 
+	public void init() throws ServletException {
+        super.init();
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+    }
+    
+    public void destroy() {
+        scheduler.shutdownNow();
+        super.destroy();
+    }
+
+    public void canacelOrder(String paymentTransactionId){
+        scheduler.schedule(() -> {
+        	OrderPayManagement management = new OrderPayManagement();
+            try {
+				if (!management.paymentStatus(paymentTransactionId).equals("SUCCESS")) {
+					RoomOrderService orderService = new RoomOrderService();
+					List<RoomOrderVO> roomOrderVOs = orderService.getByPaymentTransactionId(paymentTransactionId);
+					for(RoomOrderVO vo : roomOrderVOs) {
+						vo.setOrderStatus(3);
+						orderService.updateRoomOrder(vo);
+		///////////////////通知會員訂單已取消
+						byte[] buf = null;
+						try (InputStream in = Files.newInputStream(Path.of(getServletContext().getRealPath("/front-end/room/images") + "/cancelled.png"))){
+							buf = new byte[in.available()];
+							in.read(buf);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						MesService mesService = new MesService();
+						mesService.addMesVO(vo.getUserId(), "訂單已取消",
+								"您的住宿訂單編號：" + vo.getOrderId() + "已取消",
+								buf, new Timestamp(System.currentTimeMillis()), (byte) 1);
+		///////////////歸還庫存量
+						OrderDetailService orderDetailService = new OrderDetailService();
+						List<OrderDetailVO> orderDetailList = orderDetailService.getByOrderID(vo.getOrderId());
+						StockService stockService = new StockService();
+						LocalDate lStartDay = vo.getCheckinDate();
+						LocalDate lEndDay = vo.getCheckoutDate();
+						Stream<LocalDate> stream = lStartDay.datesUntil(lEndDay, Period.ofDays(1));
+						List<LocalDate> dateList = stream.collect(Collectors.toList());
+						List<OrderDetailVO> orderDetailLists = orderDetailService.getByOrderID(vo.getOrderId());
+						for(OrderDetailVO detailVO : orderDetailLists) {
+							for(LocalDate day : dateList) {
+								StockVO stockVO = stockService.getOneStock(detailVO.getRoomId(), day);
+								if(stockVO != null) {
+									stockVO.setRoomRest(stockVO.getRoomRest() + detailVO.getRoomAmount());
+									stockService.updateStock(stockVO);
+								}
+							}
+						}
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+        }, 30, TimeUnit.MINUTES);
+    }
+	
     @SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
     	req.setCharacterEncoding("UTF-8");
-		Vector<RoomItem> paylist = (Vector<RoomItem>) req.getSession().getAttribute("paymentItems");
-		StockService stockService = new StockService();
-		int total = 0;////總金額
-////////// 確認庫存
-		for (RoomItem roomItem : paylist) {
-			Stream<LocalDate> stream = roomItem.getCheckinDate().datesUntil(roomItem.getCheckoutDate(),
-					Period.ofDays(1));
-			List<LocalDate> dateList = stream.collect(Collectors.toList());
-			for (LocalDate day : dateList) {
-				if (stockService.getOneStock(roomItem.getRoomId(), day).getRoomRest() < roomItem.getAmount()) {
-					req.setAttribute("lossStock", "error");
-					req.getRequestDispatcher("/ShoppingCart?action=showCart").forward(req, res);
-					return; // 如果其中有一天庫存小於需求，中斷回傳
-				}
-			}
-			total += roomItem.getPrice() * roomItem.getAmount();
-		}
-		UsersVO usersVO = (UsersVO) req.getSession().getAttribute("usersVO");
-		Integer couponNo = (req.getParameter("couponNo") == null || req.getParameter("couponNo").equals("")) ? null : Integer.parseInt(req.getParameter("couponNo"));
-		int couponDiscount = 0; ////優惠券折抵金額
-		CouponService couponService = new CouponService();
-		if(!(couponNo == null)) {
-			CouponVO couponVO = couponService.getOneCoupon(couponNo);
-			if(couponVO.getCouponType().equals(0)) {
-				couponDiscount = couponVO.getCouponDiscount().intValue();
-			}else {
-				BigDecimal discount = new BigDecimal(couponVO.getCouponDiscount());
-				BigDecimal totalPrice = new BigDecimal(total);
-				discount = totalPrice.subtract(totalPrice.multiply(discount)).setScale(0, RoundingMode.HALF_UP);
-				couponDiscount = discount.intValue();
-			}
-		}
-		Boolean bonusPointsUse = (req.getParameterValues("bonus") != null ) ? true : false;
-		Integer bonusPoint = 0; ////紅利點數
-		if(bonusPointsUse) {
-			if(total > usersVO.getBonusPoints()) {
-				bonusPoint = usersVO.getBonusPoints();
-			}else {
-				bonusPoint = total;
-			}
-		}
-		int payTotal = total - couponDiscount - bonusPoint;//付款金額
-		
-		String customerName = req.getParameter("customerName");
-		String phone = req.getParameter("customerPhone");
-		String email = req.getParameter("customerEmail");
-		
-		HashMap<String, Object> payInfo = new HashMap<String, Object>();
-		payInfo.put("couponNo", couponNo);
-		payInfo.put("customerName", customerName);
-		payInfo.put("customerPhone", phone);
-		payInfo.put("customerEmail", email);
-		payInfo.put("orgPrice", total);
-		payInfo.put("couponDiscount", couponDiscount);
-		payInfo.put("bonusPoint", bonusPoint);
-		req.getSession().setAttribute("payInfo", payInfo);
-		
-		if(payTotal < 1) {
-			req.getRequestDispatcher("/ShoppingCart?action=newOrder").forward(req, res);
-			return;
-		}
         
-		
-		
+		int payTotal = (int) req.getAttribute("payTotal");
+		int userId = (int) req.getAttribute("userId");
+		List<Integer> orderIdList = (List<Integer>) req.getAttribute("orderIdList");
 		
 		// 測試卡號: 一般信用卡測試卡號 : 4311-9522-2222-2222 安全碼 : 222
 	    URL url = new URL ("https://test-api.fonpay.tw/api/payment/"+PAYMENT_CREATE_ORDER);
@@ -125,7 +128,7 @@ public class FonPayServlet extends HttpServlet {
 	    con.setRequestProperty("X-ignore", "true");
 	    con.setDoOutput(true);
 	    
-	    String paymentNo = new String("7Tour訂房" + usersVO.getUserId() + System.currentTimeMillis());
+	    String paymentNo = new String("7Tour訂房" + userId + System.currentTimeMillis());
 	    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 	    String paymentDueDate = LocalDateTime.now().plusMinutes(30).format(dateTimeFormatter);
 	    
@@ -135,8 +138,7 @@ public class FonPayServlet extends HttpServlet {
 	               "'totalPrice':" + payTotal + "," +
 	               "'paymentDueDate':'" + paymentDueDate + "'," +
 	               "'itemName':'7Tour訂房'," +
-//	               "'callbackUrl':'https://test-platform.wecometw.com/fonpay/payment/1'," +
-	               "'redirectUrl':'http://" + req.getServerName() + ":8081" + req.getContextPath() + "/ToCreateOrder'," +
+	               "'redirectUrl':'http://" + req.getServerName() + ":8081" + req.getContextPath() + "/PayFinish'," +
 	               "}," +
 	               "'basic':{" +
 	               "'appVersion':'0.9'," +
@@ -161,11 +163,21 @@ public class FonPayServlet extends HttpServlet {
            }
         }
         
+        
         //導向刷卡頁面
         HashMap<String, Object> map = new Gson().fromJson(response.toString(), HashMap.class);
 		LinkedTreeMap result = (LinkedTreeMap) map.get("result");
 		LinkedTreeMap payment = (LinkedTreeMap) result.get("payment");
 		String paymentUrl = (String) payment.get("paymentUrl");
+		String paymentTransactionId = (String) payment.get("paymentTransactionId");
+		RoomOrderService orderService = new RoomOrderService();
+		for(Integer orderId : orderIdList) {
+			RoomOrderVO orderVO = orderService.getOneRoomOrder(orderId);
+			orderVO.setPaymentTransactionId(paymentTransactionId);
+			orderService.updateRoomOrder(orderVO);
+		}
+		//30分鐘未付款取消訂單
+        canacelOrder(paymentTransactionId);
 		res.sendRedirect(paymentUrl);
 		return;
     }

@@ -45,7 +45,7 @@
 <body>
 	<c:import url="/front-end/header.jsp" ></c:import>
     
-    <form method="post" action="<%=request.getContextPath()%>/FonPay" class="needs-validation" novalidate>
+    <form method="post" action="<%=request.getContextPath()%>/ShoppingCart" class="needs-validation" novalidate>
         <div class="container pt-5">
             <div class="row justify-content-between">
                 <div class="col-2 fs-4 fw-bold">結帳清單</div>
@@ -151,6 +151,7 @@
                 </div>
             </div>
         </div>
+		<input type="hidden" name="action" value="newOrder">
     </form>
     
 	<c:import url="/front-end/footer.jsp" ></c:import>
