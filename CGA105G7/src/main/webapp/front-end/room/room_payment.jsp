@@ -45,7 +45,7 @@
 <body>
 	<c:import url="/front-end/header.jsp" ></c:import>
     
-    <form method="post" action="<%=request.getContextPath()%>/EcpayPayment" class="needs-validation" novalidate>
+    <form method="post" action="<%=request.getContextPath()%>/FonPay" class="needs-validation" novalidate>
         <div class="container pt-5">
             <div class="row justify-content-between">
                 <div class="col-2 fs-4 fw-bold">結帳清單</div>
@@ -152,15 +152,6 @@
             </div>
         </div>
     </form>
-    
-    <!-- modal -->
-    <div class="modal fade" id="success" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center fs-5">結帳成功，訂單已成立</div>
-            </div>
-        </div>
-    </div>
     
 	<c:import url="/front-end/footer.jsp" ></c:import>
 	
