@@ -62,7 +62,8 @@ public class FonPayServlet extends HttpServlet {
         scheduler.schedule(() -> {
         	OrderPayManagement management = new OrderPayManagement();
             try {
-				if (!management.paymentStatus(paymentTransactionId).equals("SUCCESS")) {
+            	String status = management.paymentStatus(paymentTransactionId);
+				if (!"SUCCESS".equals(status)) {
 					RoomOrderService orderService = new RoomOrderService();
 					List<RoomOrderVO> roomOrderVOs = orderService.getByPaymentTransactionId(paymentTransactionId);
 					for(RoomOrderVO vo : roomOrderVOs) {

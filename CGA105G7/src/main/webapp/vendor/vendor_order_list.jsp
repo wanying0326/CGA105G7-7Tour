@@ -146,6 +146,9 @@
                         <c:if test="${roomOrderVO.orderStatus == 3}">
                         	<td><i class="fa-solid fa-circle-xmark text-danger"></i> 已取消</td>
                         </c:if>
+                        <c:if test="${roomOrderVO.orderStatus == 4}">
+                        	<td><i class="fa-solid fa-dollar-sign"></i> 待付款</td>
+                        </c:if>
                     </tr>
                     <tr class="detail" style="display: none;">
                         <td colspan="5">

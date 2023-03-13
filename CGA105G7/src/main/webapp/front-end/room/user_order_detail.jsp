@@ -73,7 +73,8 @@
             	</div>
             </c:if>
             <c:if test="${roomOrderVO.orderStatus == 4}">
-            	<div class="col-2 text-end">
+            	<div class="col-3 d-flex p-0 justify-content-end align-items-center">
+            		<div class="text-danger fw-bold text-start me-2">付款期限：${(roomOrderVO.orderTime).plusMinutes(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))}</div>
             		<a class="btn btn-success" href="<%=request.getContextPath()%>/Pay?orderId=${roomOrderVO.orderId}">立即付款</a>
             	</div>
             </c:if>
