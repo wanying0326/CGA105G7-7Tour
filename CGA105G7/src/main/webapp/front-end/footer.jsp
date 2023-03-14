@@ -8,20 +8,6 @@
   	.bg-cblue{
 	  background-color: #7db2e4;
 	}
-	html {
-       min-height: 100%;
-       position: relative;
-    }
-
-    body {
-       margin-bottom: 300px;
-    }
-
-    footer {
-       position: absolute;
-       bottom: 0;
-       width: 100%;
-    }
   </style>
 
 <body>

@@ -30,6 +30,20 @@
             background-color: #ABD7F9;
             border-radius: 20px;
         }
+        html {
+	       min-height: 100vh;
+	       position: relative;
+	    }
+	
+	    body {
+	       padding-bottom: 300px;
+	    }
+	
+	    footer {
+	       position: absolute;
+	       bottom: 0;
+	       width: 100%;
+	    }
     </style>
 
 </head>
