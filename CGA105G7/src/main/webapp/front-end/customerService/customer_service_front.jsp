@@ -225,9 +225,9 @@ integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir
 						"receiver" : "employee",
 					};
 		    	webSocket.send(JSON.stringify(jsonObj));
-		     };
+		     	};
 	         
-	         webSocket.onmessage = function(event) {
+	         	webSocket.onmessage = function(event) {
 	             let jsonObj = JSON.parse(event.data);
 	             if ("history" === jsonObj.type) {
 	                 msgContainer.innerHTML = '';
@@ -330,10 +330,10 @@ integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir
 			"type" : "offline",
 			"sender" : self,
 			"receiver" : "employee",
-	};
-	   webSocket.send(JSON.stringify(jsonObj));
-	   webSocket.close();
-	  }
+			};
+		   webSocket.send(JSON.stringify(jsonObj));
+		   webSocket.close();
+	  	};
 	 </script>
  </c:if>
 </body>
